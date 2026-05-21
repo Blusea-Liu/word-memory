@@ -1,0 +1,832 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>🦄 单词小勇士</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  
+  body {
+    font-family: 'Comic Sans MS', 'Chalkboard SE', 'Arial Rounded MT Bold', cursive, sans-serif;
+    background: linear-gradient(180deg, #ffebee 0%, #d32f2f 25%, #1565c0 55%, #0d47a1 100%);
+    min-height: 100vh;
+    padding: 12px;
+    background-attachment: fixed;
+  }
+
+  /* ===== 飘落装饰 ===== */
+  .deco {
+    position: fixed;
+    pointer-events: none;
+    font-size: 28px;
+    opacity: 0.25;
+    animation: float 6s ease-in-out infinite;
+    z-index: 0;
+  }
+  .deco:nth-child(1) { top: 8%; left: 5%; animation-delay: 0s; font-size: 32px; }
+  .deco:nth-child(2) { top: 25%; right: 8%; animation-delay: 1.5s; font-size: 24px; }
+  .deco:nth-child(3) { top: 55%; left: 3%; animation-delay: 3s; font-size: 30px; }
+  .deco:nth-child(4) { top: 70%; right: 5%; animation-delay: 4.5s; font-size: 26px; }
+  .deco:nth-child(5) { top: 40%; left: 85%; animation-delay: 2s; }
+  .deco:nth-child(6) { top: 85%; left: 10%; animation-delay: 5s; font-size: 22px; }
+
+  @keyframes float {
+    0%, 100% { transform: translateY(0) rotate(0deg); }
+    50% { transform: translateY(-18px) rotate(8deg); }
+  }
+
+  .container {
+    max-width: 480px;
+    margin: 0 auto;
+    position: relative;
+    z-index: 1;
+  }
+
+  /* ===== 头部 ===== */
+  .header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 14px;
+    padding: 14px 18px;
+    background: rgba(255,255,255,0.88);
+    border-radius: 28px;
+    box-shadow: 0 4px 20px rgba(124,77,255,0.12);
+    backdrop-filter: blur(12px);
+    border: 2px solid rgba(124,77,255,0.08);
+  }
+  .header-left {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .header-left .logo {
+    font-size: 30px;
+    line-height: 1;
+  }
+  .header-left h1 {
+    font-size: 20px;
+    background: linear-gradient(135deg, #1565c0, #d32f2f, #ff6f00);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    letter-spacing: 1px;
+  }
+  .header .stats {
+    display: flex;
+    gap: 10px;
+    font-size: 16px;
+    font-weight: bold;
+  }
+  .header .stats .correct {
+    background: #e8f5e9;
+    color: #2e7d32;
+    padding: 4px 12px;
+    border-radius: 30px;
+    border: 2px solid #a5d6a7;
+  }
+  .header .stats .wrong {
+    background: #ffebee;
+    color: #c62828;
+    padding: 4px 12px;
+    border-radius: 30px;
+    border: 2px solid #ef9a9a;
+  }
+
+  /* ===== 上传区域 ===== */
+  .upload-area {
+    background: rgba(255,255,255,0.92);
+    border-radius: 28px;
+    padding: 30px 20px;
+    margin-bottom: 14px;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.06);
+    text-align: center;
+    border: 3px dashed #e53935;
+    transition: all 0.3s;
+  }
+  .upload-area .upload-icon { font-size: 56px; display: block; margin-bottom: 10px; }
+  .upload-area p { color: #666; font-size: 16px; margin-bottom: 10px; }
+  .upload-area input[type="file"] { display: none; }
+  .upload-area label {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 14px 34px;
+    background: linear-gradient(135deg, #d32f2f, #1565c0);
+    color: white;
+    border-radius: 40px;
+    cursor: pointer;
+    font-size: 18px;
+    font-weight: bold;
+    transition: all 0.2s;
+    font-family: inherit;
+    box-shadow: 0 4px 16px rgba(124,77,255,0.3);
+  }
+  .upload-area label:active { transform: scale(0.95); }
+  .upload-area .hint { color: #aaa; font-size: 12px; margin-top: 10px; }
+
+  /* ===== 模式切换 ===== */
+  .mode-bar {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 14px;
+  }
+  .mode-bar button {
+    flex: 1;
+    padding: 12px 8px;
+    border: 3px solid #e0e0e0;
+    border-radius: 20px;
+    background: rgba(255,255,255,0.8);
+    font-size: 15px;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-family: inherit;
+    font-weight: bold;
+  }
+  .mode-bar button.active {
+    border-color: #1565c0;
+    background: linear-gradient(135deg, #f3e5f5, #e8e0ff);
+    color: #1565c0;
+    box-shadow: 0 2px 12px rgba(124,77,255,0.15);
+  }
+  .mode-bar button:active { transform: scale(0.95); }
+
+  /* ===== 进度彩条 ===== */
+  .progress-bubbles {
+    display: flex;
+    gap: 5px;
+    margin-bottom: 12px;
+    flex-wrap: wrap;
+    padding: 0 2px;
+  }
+  .progress-bubbles .bubble {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: #e8e8e8;
+    transition: all 0.3s;
+    box-shadow: inset 0 2px 4px rgba(0,0,0,0.06);
+  }
+  .progress-bubbles .bubble.current {
+    background: linear-gradient(135deg, #1565c0, #d32f2f);
+    transform: scale(1.3);
+    box-shadow: 0 2px 8px rgba(124,77,255,0.3);
+  }
+  .progress-bubbles .bubble.correct {
+    background: linear-gradient(135deg, #66bb6a, #43a047);
+  }
+  .progress-bubbles .bubble.wrong {
+    background: linear-gradient(135deg, #ef5350, #e53935);
+  }
+
+  /* ===== 主卡片 ===== */
+  .card {
+    background: white;
+    border-radius: 32px;
+    padding: 32px 24px 24px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.06);
+    margin-bottom: 14px;
+    text-align: center;
+    position: relative;
+    border: 3px solid #1565c0;
+  }
+  .card .mascot {
+    font-size: 56px;
+    margin-bottom: 6px;
+    display: block;
+    animation: bounce 2s ease-in-out infinite;
+  }
+  @keyframes bounce {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-8px); }
+  }
+  .card .question-label {
+    color: #999;
+    font-size: 14px;
+    margin-bottom: 6px;
+  }
+  .card .question {
+    font-size: 40px;
+    font-weight: bold;
+    color: #333;
+    margin: 10px 0 20px;
+    line-height: 1.3;
+    word-break: break-word;
+    padding: 8px 0;
+  }
+  .card .question.cn {
+    color: #e65100;
+  }
+  .card .question.en {
+    color: #1565c0;
+    font-size: 36px;
+    letter-spacing: 1px;
+  }
+  .card .answer-input-wrap {
+    position: relative;
+    margin: 0 auto;
+    max-width: 340px;
+  }
+  .card .answer-input-wrap input {
+    width: 100%;
+    padding: 16px 20px;
+    font-size: 26px;
+    border: 4px solid #e0e0e0;
+    border-radius: 24px;
+    outline: none;
+    text-align: center;
+    font-family: inherit;
+    transition: all 0.3s;
+    background: #fafbff;
+  }
+  .card .answer-input-wrap input:focus {
+    border-color: #1565c0;
+    background: white;
+    box-shadow: 0 0 0 5px rgba(124,77,255,0.12);
+  }
+  .card .answer-input-wrap input.correct {
+    border-color: #4caf50;
+    background: #f1f8e9;
+    box-shadow: 0 0 0 5px rgba(76,175,80,0.15);
+  }
+  .card .answer-input-wrap input.wrong {
+    border-color: #f44336;
+    background: #fff3f0;
+    box-shadow: 0 0 0 5px rgba(244,67,54,0.12);
+  }
+
+  /* ===== 反馈泡泡 ===== */
+  .feedback {
+    margin-top: 16px;
+    min-height: 70px;
+  }
+  .feedback .result {
+    display: none;
+    padding: 14px 16px;
+    border-radius: 20px;
+    font-size: 22px;
+    font-weight: bold;
+    animation: popUp 0.4s ease;
+  }
+  .feedback .result.show { display: block; }
+  .feedback .result.correct {
+    background: linear-gradient(135deg, #e8f5e9, #c8e6c9);
+    color: #2e7d32;
+    border: 3px solid #81c784;
+  }
+  .feedback .result.wrong {
+    background: linear-gradient(135deg, #ffebee, #ffcdd2);
+    color: #c62828;
+    border: 3px solid #ef9a9a;
+  }
+  .feedback .result .correct-answer {
+    font-weight: bold;
+    font-size: 30px;
+    color: #1565c0;
+    display: block;
+    margin-top: 6px;
+  }
+  .feedback .result .celebration {
+    font-size: 40px;
+    display: block;
+    margin-bottom: 4px;
+  }
+
+  @keyframes popUp {
+    0% { transform: scale(0.5) translateY(20px); opacity: 0; }
+    60% { transform: scale(1.08); }
+    100% { transform: scale(1) translateY(0); opacity: 1; }
+  }
+
+  /* ===== 按钮 ===== */
+  .btn-row {
+    display: flex;
+    gap: 10px;
+    margin-top: 6px;
+  }
+  .btn-row button {
+    flex: 1;
+    padding: 16px 12px;
+    border: none;
+    border-radius: 24px;
+    font-size: 20px;
+    font-weight: bold;
+    font-family: inherit;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .btn-row button:active { transform: scale(0.94); }
+
+  .btn-check {
+    background: linear-gradient(135deg, #d32f2f, #1565c0);
+    color: white;
+    box-shadow: 0 4px 16px rgba(211,47,47,0.3);
+  }
+  .btn-next {
+    background: linear-gradient(135deg, #ff6f00, #ff8f00);
+    color: white;
+    box-shadow: 0 4px 16px rgba(255,111,0,0.3);
+  }
+  .btn-skip {
+    background: #f5f5f5;
+    color: #aaa;
+    flex: 0.4;
+    font-size: 16px;
+  }
+  .btn-shuffle {
+    background: linear-gradient(135deg, #00bfa5, #00e676);
+    color: white;
+    box-shadow: 0 4px 16px rgba(0,191,165,0.25);
+  }
+  .btn-reset {
+    background: linear-gradient(135deg, #ff8a80, #ff5252);
+    color: white;
+    flex: 0.4;
+    font-size: 16px;
+    box-shadow: 0 4px 12px rgba(255,82,82,0.2);
+  }
+
+  /* ===== 学习模式小卡片 ===== */
+  .learn-mode {
+    margin-top: 14px;
+    padding: 14px;
+    background: linear-gradient(135deg, #fff8e1, #fff3e0);
+    border-radius: 20px;
+    font-size: 16px;
+    color: #e65100;
+    border: 2px solid #ffe0b2;
+  }
+  .learn-mode .hint-word {
+    font-size: 30px;
+    font-weight: bold;
+    margin: 8px 0;
+    color: #333;
+    letter-spacing: 2px;
+  }
+  .learn-mode .hint-sound {
+    font-size: 20px;
+    color: #1565c0;
+    margin-top: 6px;
+  }
+
+  /* ===== 完成界面 ===== */
+  .finish-card {
+    background: white;
+    border-radius: 32px;
+    padding: 40px 20px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.06);
+    margin-bottom: 14px;
+    text-align: center;
+    border: 3px solid #ffe0b2;
+    background: linear-gradient(180deg, #fffde7, #fff8e1);
+  }
+  .finish-card .big-icon { font-size: 72px; display: block; margin-bottom: 10px; }
+  .finish-card .title { font-size: 32px; font-weight: bold; color: #1565c0; margin: 10px 0; }
+  .finish-card .score {
+    font-size: 20px;
+    color: #666;
+    margin: 12px 0;
+    line-height: 1.8;
+  }
+  .finish-card .stars { font-size: 48px; margin: 10px 0; }
+  .finish-card button {
+    padding: 16px 36px;
+    font-size: 20px;
+    font-weight: bold;
+    font-family: inherit;
+    border: none;
+    border-radius: 30px;
+    cursor: pointer;
+    margin: 6px;
+    transition: all 0.15s;
+  }
+  .finish-card button:active { transform: scale(0.94); }
+
+  /* ===== 键盘提示 ===== */
+  .key-hint {
+    text-align: center;
+    color: #ccc;
+    font-size: 13px;
+    margin-top: 8px;
+    padding-bottom: 20px;
+  }
+
+  /* ===== 空状态 ===== */
+  .empty-state {
+    text-align: center;
+    padding: 40px 20px;
+    background: rgba(255,255,255,0.85);
+    border-radius: 28px;
+  }
+  .empty-state .big-icon { font-size: 60px; display: block; margin-bottom: 10px; }
+  .empty-state p { color: #999; font-size: 15px; line-height: 1.8; }
+</style>
+</head>
+<body>
+
+<div class="deco">⭐</div>
+<div class="deco">🌈</div>
+<div class="deco">🦋</div>
+<div class="deco">🌸</div>
+<div class="deco">✨</div>
+<div class="deco">🎈</div>
+
+<div class="container" id="app">
+
+  <!-- 头部 -->
+  <div class="header">
+    <div class="header-left">
+      <span class="logo">🦄</span>
+      <h1>单词小勇士</h1>
+    </div>
+    <div class="stats" v-if="words.length > 0">
+      <span class="correct">✅ {{stats.correct}}</span>
+      <span class="wrong">❌ {{stats.wrong}}</span>
+    </div>
+  </div>
+
+  <!-- 上传区域 -->
+  <div class="upload-area" v-if="words.length === 0">
+    <span class="upload-icon">📚</span>
+    <p>上传单词表，开始学习吧！</p>
+    <input type="file" id="fileInput" accept=".xlsx,.xls,.csv" @change="handleFile">
+    <label for="fileInput">📁 选择 Excel 文件</label>
+    <div class="hint">支持 .xlsx .xls .csv</div>
+    <div style="margin-top:14px;padding:14px;background:#f0f4ff;border-radius:18px;text-align:left;font-size:13px;color:#555;">
+      <div style="font-weight:bold;color:#1565c0;margin-bottom:6px;">📋 表格要有这两列：</div>
+      <div style="display:flex;gap:8px;justify-content:center;font-size:14px;">
+        <span style="background:#e8e0ff;padding:4px 16px;border-radius:8px;">中文</span>
+        <span style="background:#e8e0ff;padding:4px 16px;border-radius:8px;">英文</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- 模式切换 -->
+  <div class="mode-bar" v-if="words.length > 0">
+    <button :class="{ active: mode === 'cn2en' }" @click="mode='cn2en'; resetInput()">
+      🇨🇳→🇬🇧 中译英
+    </button>
+    <button :class="{ active: mode === 'en2cn' }" @click="mode='en2cn'; resetInput()">
+      🇬🇧→🇨🇳 英译中
+    </button>
+  </div>
+
+  <!-- 进度条 -->
+  <div class="progress-bubbles" v-if="words.length > 0 && !isFinished">
+    <div v-for="(w, i) in words" :key="i" class="bubble"
+      :class="{
+        current: i === wordIndex && !showResult,
+        correct: results[i] === 'correct',
+        wrong: results[i] === 'wrong',
+      }">
+    </div>
+  </div>
+
+  <!-- 主卡片 -->
+  <template v-if="words.length > 0 && currentWord && !isFinished">
+    <div class="card">
+      <!-- 表情 -->
+      <div class="mascot" v-if="showResult && lastResult === 'correct'">🥳🎉✨</div>
+      <div class="mascot" v-else-if="showResult && lastResult === 'wrong'">😅💪</div>
+      <div class="mascot" v-else>🤔💭</div>
+
+      <div class="question-label">
+        {{ mode === 'cn2en' ? '看到中文，拼出英文 👇' : '看到英文，写出中文 👇' }}
+      </div>
+
+      <!-- 中文 → 英文 -->
+      <template v-if="mode === 'cn2en'">
+        <div class="question cn">{{ currentWord.中文 }}</div>
+        <div class="answer-input-wrap">
+          <input ref="answerInput" v-model="userAnswer" type="text" autocomplete="off" autocapitalize="none"
+            placeholder="输入英文..."
+            :class="{ correct: showResult && lastResult === 'correct', wrong: showResult && lastResult === 'wrong' }"
+            :disabled="showResult"
+            @keyup.enter="checkAnswer"
+            @keyup.down="skipWord"
+            inputmode="text">
+        </div>
+        <div class="learn-mode" v-if="showResult && lastResult === 'wrong'">
+          <div>📖 再读几遍记住它！</div>
+          <div class="hint-word">{{ currentWord.英文 }}</div>
+          <div class="hint-sound">🔊 {{ getPhoneticHint(currentWord.英文) }}</div>
+        </div>
+      </template>
+
+      <!-- 英文 → 中文 -->
+      <template v-if="mode === 'en2cn'">
+        <div class="question en">{{ currentWord.英文 }}</div>
+        <div class="answer-input-wrap">
+          <input ref="answerInput" v-model="userAnswer" type="text" autocomplete="off"
+            placeholder="输入中文..."
+            :class="{ correct: showResult && lastResult === 'correct', wrong: showResult && lastResult === 'wrong' }"
+            :disabled="showResult"
+            @keyup.enter="checkAnswer"
+            inputmode="text">
+        </div>
+        <div class="learn-mode" v-if="showResult && lastResult === 'wrong'">
+          <div>📖 记住哦：</div>
+          <div class="hint-word">{{ currentWord.中文 }}</div>
+        </div>
+      </template>
+
+      <!-- 反馈 -->
+      <div class="feedback">
+        <div class="result" :class="{ show: showResult, correct: lastResult === 'correct', wrong: lastResult === 'wrong' }">
+          <span class="celebration" v-if="lastResult === 'correct'">🎉</span>
+          <span v-if="lastResult === 'correct'">太棒啦！答对啦！⭐</span>
+          <span v-else>不对哦～正确答案是：</span>
+          <span class="correct-answer" v-if="lastResult === 'wrong'">{{ mode === 'cn2en' ? currentWord.英文 : currentWord.中文 }}</span>
+          <div style="font-size:14px;color:#d32f2f;margin-top:6px;font-weight:bold;" v-if="lastResult === 'wrong' && !inReview">⚡ 结尾再来消灭它！</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 按钮 -->
+    <div class="btn-row">
+      <button class="btn-skip" @click="skipWord" v-if="!showResult">⏭ 跳过</button>
+      <button class="btn-check" @click="checkAnswer" v-if="!showResult">✅ 检查答案</button>
+      <button class="btn-next" @click="nextWord" v-if="showResult">{{ isLastWord ? '🎊 完成' : '👉 下一题' }}</button>
+    </div>
+
+    <div class="key-hint">
+      ✨ 按 Enter 检查 &nbsp;·&nbsp; 按 ↓ 跳过
+    </div>
+  </template>
+
+  <!-- 完成界面 -->
+  <div class="finish-card" v-if="isFinished && words.length > 0">
+    <span class="big-icon">{{ inReview ? '💪' : '⚡' }}</span>
+    <div class="title" v-if="!inReview">全部搞定！👊🔥</div>
+    <div class="title" v-else>怪兽全消灭！👊🔥</div>
+    <div class="stars">
+      {{ stats.correct / words.length >= 0.9 ? '🌟🌟🌟' : stats.correct / words.length >= 0.7 ? '🌟🌟' : '⭐' }}
+    </div>
+    <div class="score">
+      ✅ 正确：<span style="color:#2e7d32;font-weight:bold;">{{ stats.correct }}</span> 题<br>
+      ❌ 错误：<span style="color:#c62828;font-weight:bold;">{{ stats.wrong }}</span> 题<br>
+      📚 共 <span style="color:#0d47a1;font-weight:bold;">{{ words.length }}</span> 题
+    </div>
+    <div style="font-size:14px;color:#1565c0;margin:8px 0;font-weight:bold;" v-if="inReview">
+      这些怪兽全被消灭了！👊⚡
+    </div>
+    <!-- 错题列表 -->
+    <div class="wrong-list" v-if="displayWrongWords.length > 0">
+      <div class="wrong-list-title">📝 答错的单词（{{ displayWrongWords.length }}个）</div>
+      <div class="item" v-for="w in displayWrongWords" :key="w.英文">
+        <span class="cn">{{ w.中文 }}</span>
+        <span class="en">{{ w.英文 }}</span>
+      </div>
+    </div>
+    <div>
+      <button style="background:linear-gradient(135deg,#ff6f00,#ffa000);color:white;box-shadow:0 4px 16px rgba(255,111,0,0.3);" @click="retryWrongWords" v-if="displayWrongWords.length > 0">🔄 再做一次错题</button>
+      <button style="background:linear-gradient(135deg,#e65100,#ff8f00);color:white;box-shadow:0 4px 16px rgba(230,81,0,0.25);" @click="shuffleWords">🔀 再抽20个</button>
+      <button style="background:linear-gradient(135deg,#d32f2f,#1565c0);color:white;box-shadow:0 4px 12px rgba(211,47,47,0.2);" @click="resetAll">📁 换一组单词</button>
+    </div>
+  </div>
+
+  <!-- 空状态 -->
+  <div class="empty-state" v-if="words.length === 0 && sourceFile">
+    <span class="big-icon">😕</span>
+    <p>没找到「中文」和「英文」两列数据哦</p>
+    <p style="font-size:13px;">请检查 Excel 表格的列名</p>
+    <div style="margin-top:12px;">
+      <button style="padding:12px 30px;background:linear-gradient(135deg,#d32f2f,#1565c0);color:white;border:none;border-radius:30px;font-size:16px;font-family:inherit;font-weight:bold;cursor:pointer;" @click="sourceFile=null;words=[]">👈 重新选择</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/vue@2.7.14/dist/vue.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script>
+new Vue({
+  el: '#app',
+  data: {
+    allWords: [],      // 原始全部单词
+    words: [],         // 当前20个
+    wordIndex: 0,
+    userAnswer: '',
+    showResult: false,
+    lastResult: null,
+    mode: 'cn2en',
+    results: {},
+    sourceFile: null,
+    reviewWords: [],    // 答错的单词（结尾复习）
+    inReview: false,    // 是否在复习模式
+    originalWrongWords: [], // 保留一份原始错题列表（给列表用）
+  },
+  computed: {
+    currentWord() {
+      if (this.words.length === 0) return null;
+      if (this.wordIndex >= this.words.length) return null;
+      return this.words[this.wordIndex];
+    },
+    isLastWord() {
+      return this.wordIndex >= this.words.length - 1;
+    },
+    isFinished() {
+      if (this.inReview) {
+        return this.words.length > 0 && this.wordIndex >= this.words.length;
+      }
+      return this.words.length > 0 && this.wordIndex >= this.words.length;
+    },
+    stats() {
+      const vals = Object.values(this.results);
+      return {
+        correct: vals.filter(v => v === 'correct').length,
+        wrong: vals.filter(v => v === 'wrong').length,
+      };
+    },
+    displayWrongWords() {
+      // 在完成页面显示错词列表：优先显示原始错题，其次当前错题
+      if (this.originalWrongWords.length > 0) return this.originalWrongWords;
+      return this.reviewWords;
+    },
+  },
+  methods: {
+    handleFile(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+      this.sourceFile = file.name;
+
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        try {
+          const data = new Uint8Array(ev.target.result);
+          const workbook = XLSX.read(data, { type: 'array' });
+          const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+          const json = XLSX.utils.sheet_to_json(firstSheet);
+
+          if (!json || json.length === 0) { this.words = []; this.$forceUpdate(); return; }
+
+          const cols = Object.keys(json[0]);
+          let cnCol = cols.find(c => c.includes('中文') || c === '汉语');
+          let enCol = cols.find(c => c.includes('英文') || c.includes('英语') || c.toLowerCase().includes('english'));
+
+          if (!cnCol && cols.length >= 2) cnCol = cols.find(c => c === '释义' || c === '词语');
+          if (!enCol && cols.length >= 2) enCol = cols.find(c => c.toLowerCase() === 'word' || c.toLowerCase() === 'words');
+
+          if (!cnCol || !enCol) {
+            if (cols.length >= 2) { cnCol = cols[0]; enCol = cols[1]; }
+            else { this.words = []; this.$forceUpdate(); return; }
+          }
+
+          this.allWords = json.map(row => ({
+            '中文': String(row[cnCol] || '').trim(),
+            '英文': String(row[enCol] || '').trim(),
+          })).filter(w => w['中文'] && w['英文']);
+
+          if (this.allWords.length === 0) { this.words = []; this.$forceUpdate(); return; }
+
+          // 随机抽20个
+          this.pick20();
+          this.$nextTick(() => { if (this.$refs.answerInput) this.$refs.answerInput.focus(); });
+        } catch (err) { alert('读取文件出错：' + err.message); }
+      };
+      reader.readAsArrayBuffer(file);
+      e.target.value = '';
+    },
+
+    checkAnswer() {
+      if (this.showResult) return;
+      const answer = this.userAnswer.trim().toLowerCase();
+      if (!answer) return;
+
+      let correct = false;
+      if (this.mode === 'cn2en') {
+        const target = this.currentWord.英文.toLowerCase().trim();
+        correct = answer === target;
+      } else {
+        const target = this.currentWord.中文.toLowerCase().trim();
+        correct = answer === target;
+      }
+
+      this.lastResult = correct ? 'correct' : 'wrong';
+      this.showResult = true;
+      this.results[this.wordIndex] = this.lastResult;
+
+      // 答错了，加入复习列表
+      if (!correct) {
+        this.reviewWords.push({...this.currentWord});
+      }
+      this.$forceUpdate();
+    },
+
+    nextWord() {
+      if (this.isLastWord) {
+        // 20题完成，如果有错题，先存一份原始错题，再进入复习
+        if (this.reviewWords.length > 0 && !this.inReview) {
+          this.originalWrongWords = this.reviewWords.map(w => ({...w}));
+          this.words = [...this.reviewWords];
+          this.shuffleArray(this.words);
+          this.wordIndex = 0;
+          this.results = {};
+          this.inReview = true;
+          this.userAnswer = '';
+          this.showResult = false;
+          this.lastResult = null;
+          this.$nextTick(() => { if (this.$refs.answerInput) this.$refs.answerInput.focus(); });
+          return;
+        }
+        this.wordIndex = this.words.length;
+        this.$forceUpdate();
+        return;
+      }
+      this.wordIndex++;
+      this.userAnswer = '';
+      this.showResult = false;
+      this.lastResult = null;
+      this.$nextTick(() => { if (this.$refs.answerInput) this.$refs.answerInput.focus(); });
+    },
+
+    skipWord() {
+      if (this.showResult) return;
+      this.results[this.wordIndex] = 'skipped';
+      this.wordIndex++;
+      this.userAnswer = '';
+      this.showResult = false;
+      this.lastResult = null;
+      this.$nextTick(() => { if (this.$refs.answerInput) this.$refs.answerInput.focus(); });
+    },
+
+    retryWrongWords() {
+      // 用原始的错题列表再做一次
+      if (this.originalWrongWords.length === 0) return;
+      this.words = this.originalWrongWords.map(w => ({...w}));
+      this.shuffleArray(this.words);
+      this.wordIndex = 0;
+      this.results = {};
+      this.reviewWords = [];
+      this.originalWrongWords = [];
+      this.inReview = false;
+      this.showResult = false;
+      this.lastResult = null;
+      this.userAnswer = '';
+      this.$nextTick(() => { if (this.$refs.answerInput) this.$refs.answerInput.focus(); });
+    },
+
+    pick20() {
+      // 从全部单词中随机抽20个
+      this.shuffleArray(this.allWords);
+      this.words = this.allWords.slice(0, Math.min(20, this.allWords.length));
+      this.wordIndex = 0;
+      this.results = {};
+      this.reviewWords = [];
+      this.originalWrongWords = [];
+      this.inReview = false;
+      this.showResult = false;
+      this.lastResult = null;
+      this.userAnswer = '';
+      this.$nextTick(() => { if (this.$refs.answerInput) this.$refs.answerInput.focus(); });
+    },
+
+    shuffleWords() {
+      this.pick20();
+    },
+
+    resetAll() {
+      this.words = [];
+      this.allWords = [];
+      this.wordIndex = 0;
+      this.results = {};
+      this.reviewWords = [];
+      this.originalWrongWords = [];
+      this.inReview = false;
+      this.showResult = false;
+      this.lastResult = null;
+      this.userAnswer = '';
+      this.sourceFile = null;
+    },
+
+    resetInput() {
+      this.userAnswer = '';
+      this.showResult = false;
+      this.lastResult = null;
+      this.$nextTick(() => { if (this.$refs.answerInput) this.$refs.answerInput.focus(); });
+    },
+
+    shuffleArray(arr) {
+      for (let i = arr.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [arr[i], arr[j]] = [arr[j], arr[i]];
+      }
+    },
+
+    getPhoneticHint(word) {
+      const w = word.toLowerCase();
+      const vowels = 'aeiou';
+      let hint = '';
+      for (let i = 0; i < w.length; i++) {
+        hint += w[i];
+        if (i < w.length - 1 && vowels.includes(w[i]) && !vowels.includes(w[i+1])) {
+          hint += '-';
+        }
+      }
+      return hint;
+    },
+  },
+});
+</script>
+</body>
+</html>
